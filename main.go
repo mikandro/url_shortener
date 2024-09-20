@@ -1,33 +1,35 @@
 package main
 
 import (
-	"errors"
+	"log"
 	"net/http"
 
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
+	"github.com/mikandro/url_shortener/internal/config"
+	"github.com/mikandro/url_shortener/internal/redis"
+	"github.com/mikandro/url_shortener/internal/router"
 )
 
 func main() {
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.URLFormat)
-	r.Use(render.SetContentType(render.ContentTypeJSON))
+	// Load configuration
+	cfg := config.LoadConfig()
 
+	// Initialize Redis client
+	redisClient := redis.NewClient(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+	defer redisClient.Close() // Ensure the client is closed when the app exits
+
+	// Set up the router
+	r := router.NewRouter(redisClient)
+
+	// Start the server
+	log.Println("Starting server on :3000")
+	if err := http.ListenAndServe(":3000", r); err != nil {
+		log.Fatalf("Could not start server: %v", err)
+	}
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("url shortener."))
 	})
-
-	r.Route("/v1", func(r chi.Router) {
-		r.Route("/url", func(r chi.Router) {
-			r.Post("/shorten", shortenUrl)
-		})
-	})
-
-	http.ListenAndServe(":3000", r)
 }
 
 type Url struct {
@@ -38,21 +40,8 @@ type UrlShortenRequest struct {
 	*Url
 }
 
-func shortenUrl(w http.ResponseWriter, r *http.Request) {
-	data := &UrlShortenRequest{}
-
-	if err := render.Bind(r, data); err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
-		return
-	}
-}
-
-func (u *UrlShortenRequest) Bind(r *http.Request) error {
-	// error to avoid a nil pointer dereference.
-	if u.Url == nil {
-		return errors.New("missing required Url fields")
-	}
-	return nil
+type ShortenUrlHandler struct {
+	RedisClient *redis.Client
 }
 
 type ErrResponse struct {

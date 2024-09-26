@@ -13,6 +13,6 @@ func NewRouter(redisClient *redis.Client) *chi.Mux {
 		RedisClient: redisClient,
 	}
 
-	r.Post("/url", urlHandler.AddShortUrl)
+	r.Post("/url", urlHandler.ShortenUrl)
 	return r
 }

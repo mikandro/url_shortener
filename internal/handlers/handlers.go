@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/mikandro/url_shortener/internal/redis"
+	"github.com/mikandro/url_shortener/internal/shortener"
 )
 
 type UrlHandler struct {
@@ -17,7 +18,7 @@ type Url struct {
 	Url string `json:"url"`
 }
 
-func (h *UrlHandler) AddShortUrl(w http.ResponseWriter, r *http.Request) {
+func (h *UrlHandler) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 	var longUrl Url
 	if err := json.NewDecoder(r.Body).Decode(&longUrl); err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
@@ -26,14 +27,10 @@ func (h *UrlHandler) AddShortUrl(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	urlJSON, err := json.Marshal(longUrl)
-	if err != nil {
-		http.Error(w, "Error encoding article to JSON", http.StatusInternalServerError)
-		return
-	}
+	shortCode := shortener.GenerateShortCode(longUrl.Url)
 
 	// Store the url in Redis (for example, as a JSON string)
-	err = h.RedisClient.RedisClient.Set(ctx, longUrl.Url, urlJSON, 0).Err()
+	err := h.RedisClient.RedisClient.Set(ctx, longUrl.Url, shortCode, 0).Err()
 	if err != nil {
 		log.Printf("Error saving url in db %e", err)
 		http.Error(w, "Could not save url", http.StatusInternalServerError)

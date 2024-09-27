@@ -14,29 +14,48 @@ type UrlHandler struct {
 	RedisClient *redis.Client
 }
 
-type Url struct {
+type ShortenUrlRequest struct {
 	Url string `json:"url"`
 }
 
+type ShortenUrlResponse struct {
+	ShortUrl string `json:"short_url"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 func (h *UrlHandler) ShortenUrl(w http.ResponseWriter, r *http.Request) {
-	var longUrl Url
-	if err := json.NewDecoder(r.Body).Decode(&longUrl); err != nil {
+	var req ShortenUrlRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
 	ctx := context.Background()
 
-	shortCode := shortener.GenerateShortCode(longUrl.Url)
+	shortCode := shortener.GenerateShortCode(req.Url)
 
 	// Store the url in Redis (for example, as a JSON string)
-	err := h.RedisClient.RedisClient.Set(ctx, longUrl.Url, shortCode, 0).Err()
+	err := h.RedisClient.RedisClient.Set(ctx, req.Url, shortCode, 0).Err()
 	if err != nil {
 		log.Printf("Error saving url in db %e", err)
 		http.Error(w, "Could not save url", http.StatusInternalServerError)
 		return
 	}
 
+	response := ShortenUrlResponse{
+		ShortUrl: "http://localhost/" + shortCode,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(longUrl)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to encode the response"})
+		return
+	}
 }

@@ -1,4 +1,4 @@
-package redis
+package my_redis // TODO find a proper name
 
 import (
 	"context"

@@ -6,12 +6,15 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/mikandro/url_shortener/internal/redis"
+	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
+
+	my_redis "github.com/mikandro/url_shortener/internal/redis"
 	"github.com/mikandro/url_shortener/internal/shortener"
 )
 
 type UrlHandler struct {
-	RedisClient *redis.Client
+	RedisClient *my_redis.Client
 }
 
 type ShortenUrlRequest struct {
@@ -19,6 +22,10 @@ type ShortenUrlRequest struct {
 }
 
 type ShortenUrlResponse struct {
+	ShortUrl string `json:"short_url"`
+}
+
+type RedirectUrlRequest struct {
 	ShortUrl string `json:"short_url"`
 }
 
@@ -38,7 +45,7 @@ func (h *UrlHandler) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 	shortCode := shortener.GenerateShortCode(req.Url)
 
 	// Store the url in Redis (for example, as a JSON string)
-	err := h.RedisClient.RedisClient.Set(ctx, req.Url, shortCode, 0).Err()
+	err := h.RedisClient.RedisClient.Set(ctx, shortCode, req.Url, 0).Err()
 	if err != nil {
 		log.Printf("Error saving url in db %e", err)
 		http.Error(w, "Could not save url", http.StatusInternalServerError)
@@ -58,4 +65,23 @@ func (h *UrlHandler) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to encode the response"})
 		return
 	}
+}
+
+func (h *UrlHandler) RedirectUrl(w http.ResponseWriter, r *http.Request) {
+	shortUrl := chi.URLParam(r, "short_url")
+
+	ctx := context.Background()
+	longUrl, err := h.RedisClient.RedisClient.Get(ctx, shortUrl).Result()
+	log.Printf("longUrl: %e", longUrl)
+	if err == redis.Nil { // TODO it should be redis.Nil
+		// Short code does not exist in Redis
+		http.Error(w, "Short URL not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		// An error occurred while accessing Redis
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, longUrl, http.StatusFound)
 }

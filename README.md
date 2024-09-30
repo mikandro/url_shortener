@@ -1,7 +1,3 @@
-Certainly! Here's the README file for your URL Shortener project, with code examples properly formatted and backticks correctly escaped:
-
----
-
 # URL Shortener
 
 A simple URL shortener service written in Go (Golang) that provides a RESTful API for creating and retrieving shortened URLs.
@@ -131,9 +127,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Contact
 
 Created by [mikandro](https://github.com/mikandro). Feel free to reach out!
-
----
-
-Feel free to copy and paste this README into your project. The code examples have been properly formatted, and any necessary backticks have been correctly escaped.
-
-Let me know if you need any further assistance or modifications!

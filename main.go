@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/mikandro/url_shortener/internal/config"
-	"github.com/mikandro/url_shortener/internal/redis"
+	my_redis "github.com/mikandro/url_shortener/internal/redis"
 	"github.com/mikandro/url_shortener/internal/router"
 )
 
@@ -16,7 +16,7 @@ func main() {
 	cfg := config.LoadConfig()
 
 	// Initialize Redis client
-	redisClient := redis.NewClient(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+	redisClient := my_redis.NewClient(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
 	defer redisClient.Close() // Ensure the client is closed when the app exits
 
 	// Set up the router
@@ -41,7 +41,7 @@ type UrlShortenRequest struct {
 }
 
 type ShortenUrlHandler struct {
-	RedisClient *redis.Client
+	RedisClient *my_redis.Client
 }
 
 type ErrResponse struct {

@@ -3,10 +3,10 @@ package router
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/mikandro/url_shortener/internal/handlers"
-	"github.com/mikandro/url_shortener/internal/redis"
+	my_redis "github.com/mikandro/url_shortener/internal/redis"
 )
 
-func NewRouter(redisClient *redis.Client) *chi.Mux {
+func NewRouter(redisClient *my_redis.Client) *chi.Mux {
 	r := chi.NewRouter()
 
 	urlHandler := &handlers.UrlHandler{
@@ -14,5 +14,6 @@ func NewRouter(redisClient *redis.Client) *chi.Mux {
 	}
 
 	r.Post("/url", urlHandler.ShortenUrl)
+	r.Get("/{short_url}", urlHandler.RedirectUrl)
 	return r
 }

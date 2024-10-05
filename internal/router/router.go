@@ -15,5 +15,6 @@ func NewRouter(redisClient *my_redis.Client) *chi.Mux {
 
 	r.Post("/url", urlHandler.ShortenUrl)
 	r.Get("/{short_url}", urlHandler.RedirectUrl)
+	r.Delete("/{short_url}", urlHandler.DeleteUrl)
 	return r
 }

@@ -72,7 +72,6 @@ func (h *UrlHandler) RedirectUrl(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	longUrl, err := h.RedisClient.RedisClient.Get(ctx, shortUrl).Result()
-	log.Printf("longUrl: %e", longUrl)
 	if err == redis.Nil { // TODO it should be redis.Nil
 		// Short code does not exist in Redis
 		http.Error(w, "Short URL not found", http.StatusNotFound)
@@ -84,4 +83,28 @@ func (h *UrlHandler) RedirectUrl(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, longUrl, http.StatusFound)
+}
+
+func (h *UrlHandler) DeleteUrl(w http.ResponseWriter, r *http.Request) {
+	shortUrl := chi.URLParam(r, "short_url")
+
+	ctx := context.Background()
+
+	res, err := h.RedisClient.RedisClient.Del(ctx, shortUrl).Result()
+
+	if err == redis.Nil {
+		http.Error(w, "Short url not found", http.StatusNotFound)
+	} else if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	if res == 0 {
+		http.Error(w, "Short URL not found", http.StatusNotFound)
+		return
+	}
+
+	response := map[string]string{
+		"message": "Short url was deleted successfully",
+	}
+	json.NewEncoder(w).Encode(response)
 }

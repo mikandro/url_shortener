@@ -53,7 +53,7 @@ func (h *UrlHandler) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := ShortenUrlResponse{
-		ShortUrl: "http://localhost/" + shortCode,
+		ShortUrl: "http://localhost:3000/" + shortCode,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

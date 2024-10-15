@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -47,4 +48,32 @@ func TestShortenUrl(t *testing.T) {
 	var responseBody map[string]string
 	err := json.NewDecoder(res.Body).Decode(&responseBody)
 	assert.NoError(t, err)
+
+	shortURL, ok := responseBody["short_url"]
+	assert.True(t, ok)
+	assert.NotEmpty(t, shortURL)
+}
+
+func TestRedirect(t *testing.T) {
+	redisClient, teardown := setupTestRedis()
+	defer teardown()
+
+	handler := &UrlHandler{RedisClient: redisClient}
+
+	shortCode := "abcd1234"
+	longURL := "https://example.com"
+	ctx := context.Background()
+	err := redisClient.RedisClient.Set(ctx, shortCode, longURL, 0).Err()
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/"+shortCode, nil)
+	w := httptest.NewRecorder()
+
+	handler.RedirectUrl(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	// Check that the response is a redirect
+	assert.Equal(t, http.StatusFound, res.StatusCode)
 }

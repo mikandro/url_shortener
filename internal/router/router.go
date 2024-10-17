@@ -4,10 +4,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/mikandro/url_shortener/internal/handlers"
-	my_redis "github.com/mikandro/url_shortener/internal/redis"
+	"github.com/redis/go-redis/v9"
 )
 
-func NewRouter(redisClient *my_redis.Client) *chi.Mux {
+func NewRouter(redisClient *redis.Client) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{

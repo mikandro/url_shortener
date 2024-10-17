@@ -9,18 +9,20 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	my_redis "github.com/mikandro/url_shortener/internal/redis"
+	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTestRedis() (*my_redis.Client, func()) {
+func setupTestRedis() (*redis.Client, func()) {
 	s, err := miniredis.Run()
 	if err != nil {
 		panic(err)
 	}
 
-	client := my_redis.NewClient(s.Addr(), "", 1)
+	client := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
 
 	return client, func() {
 		client.Close()
@@ -64,11 +66,15 @@ func TestRedirect(t *testing.T) {
 	shortCode := "abcd1234"
 	longURL := "https://example.com"
 	ctx := context.Background()
-	err := redisClient.RedisClient.Set(ctx, shortCode, longURL, 0).Err()
+	err := redisClient.Set(ctx, shortCode, longURL, 0).Err()
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, "/"+shortCode, nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("short_url", shortCode)
+
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	handler.RedirectUrl(w, req)
 
 	res := w.Result()
@@ -89,12 +95,15 @@ func TestDeleteShortUrl(t *testing.T) {
 	shortCode := "abcd1234"
 	longURL := "https://example.com"
 	ctx := context.Background()
-	err := redisClient.RedisClient.Set(ctx, shortCode, longURL, 0).Err()
+	err := redisClient.Set(ctx, shortCode, longURL, 0).Err()
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodDelete, "/"+shortCode, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/", nil)
 	w := httptest.NewRecorder()
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("short_url", shortCode)
 
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	handler.DeleteUrl(w, req)
 
 	res := w.Result()
@@ -108,8 +117,8 @@ func TestDeleteShortUrl(t *testing.T) {
 
 	message, ok := responseBody["message"]
 	assert.True(t, ok)
-	assert.Equal(t, "Short URL deleted successfully", message)
+	assert.Equal(t, "Short url was deleted successfully", message)
 
-	_, err = redisClient.RedisClient.Get(ctx, shortCode).Result()
+	_, err = redisClient.Get(ctx, shortCode).Result()
 	assert.Equal(t, redis.Nil, err)
 }

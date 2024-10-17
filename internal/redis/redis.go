@@ -1,4 +1,4 @@
-package my_redis // TODO find a proper name
+package redis_db // TODO find a proper name
 
 import (
 	"context"
@@ -8,11 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type Client struct {
-	RedisClient *redis.Client
-}
-
-func NewClient(addr, password string, db int) *Client {
+func NewClient(addr, password string, db int) *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
@@ -27,9 +23,5 @@ func NewClient(addr, password string, db int) *Client {
 		log.Fatalf("Could not connect to Redis: %v", err)
 	}
 
-	return &Client{RedisClient: rdb}
-}
-
-func (c *Client) Close() error {
-	return c.RedisClient.Close()
+	return rdb
 }

@@ -9,12 +9,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 
-	my_redis "github.com/mikandro/url_shortener/internal/redis"
 	"github.com/mikandro/url_shortener/internal/shortener"
 )
 
 type UrlHandler struct {
-	RedisClient *my_redis.Client
+	RedisClient *redis.Client
 }
 
 type ShortenUrlRequest struct {
@@ -45,7 +44,7 @@ func (h *UrlHandler) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 	shortCode := shortener.GenerateShortCode(req.Url)
 
 	// Store the url in Redis (for example, as a JSON string)
-	err := h.RedisClient.RedisClient.Set(ctx, shortCode, req.Url, 0).Err()
+	err := h.RedisClient.Set(ctx, shortCode, req.Url, 0).Err()
 	if err != nil {
 		log.Printf("Error saving url in db %e", err)
 		http.Error(w, "Could not save url", http.StatusInternalServerError)
@@ -71,7 +70,7 @@ func (h *UrlHandler) RedirectUrl(w http.ResponseWriter, r *http.Request) {
 	shortUrl := chi.URLParam(r, "short_url")
 
 	ctx := context.Background()
-	longUrl, err := h.RedisClient.RedisClient.Get(ctx, shortUrl).Result()
+	longUrl, err := h.RedisClient.Get(ctx, shortUrl).Result()
 	if err == redis.Nil { // TODO it should be redis.Nil
 		// Short code does not exist in Redis
 		http.Error(w, "Short URL not found", http.StatusNotFound)
@@ -90,7 +89,7 @@ func (h *UrlHandler) DeleteUrl(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	res, err := h.RedisClient.RedisClient.Del(ctx, shortUrl).Result()
+	res, err := h.RedisClient.Del(ctx, shortUrl).Result()
 
 	if err == redis.Nil {
 		http.Error(w, "Short url not found", http.StatusNotFound)

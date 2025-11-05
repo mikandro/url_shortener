@@ -1,6 +1,8 @@
 package router
 
 import (
+	"time"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/mikandro/url_shortener/internal/handlers"
@@ -18,6 +20,10 @@ func NewRouter(redisClient *redis.Client) *chi.Mux {
 		AllowCredentials: false,
 		MaxAge:           300, // Maximum value for preflight requests cache
 	}))
+
+	// Add rate limiting: 10 requests per second per IP
+	r.Use(RateLimitMiddleware(10, time.Second))
+
 	urlHandler := &handlers.UrlHandler{
 		RedisClient: redisClient,
 	}
